@@ -9,6 +9,7 @@ class DOMHelper {
         const element = document.getElementById(elementId)
         const destinationElement = document.querySelector(newDestinationSelector)
         destinationElement.append(element)
+        element.scrollIntoView({behavior: 'smooth'})
     }
 }
 
@@ -35,9 +36,10 @@ class Component {
 }
 
 class Tooltip extends Component {
-    constructor(closeNotifierFunction) {
-        super()
+    constructor(closeNotifierFunction, text, hostElementId) {
+        super(hostElementId)
         this.closeNotifier = closeNotifierFunction
+        this.text = text
         this.create()
     }
 
@@ -49,7 +51,23 @@ class Tooltip extends Component {
     create() {
         const tooltipElement = document.createElement('div')
         tooltipElement.className = 'card'
-        tooltipElement.textContent = 'DUMMY!'
+        const tooltipTemplate = document.getElementById('tooltip')
+        const tooltipBody = document.importNode(tooltipTemplate.content, true)
+        tooltipBody.querySelector('p').textContent = this.text
+        tooltipElement.append(tooltipBody)
+        
+        const hostElPosLeft = this.hostElement.offsetLeft
+        const hostElPosTop = this.hostElement.offsetTop
+        const hostElHeight = this.hostElement.clientHeight
+        const parentElScrolling = this.hostElement.parentElement.scrollTop
+
+        const x = hostElPosLeft + 20
+        const y = hostElPosTop + hostElHeight - parentElScrolling - 10
+
+        tooltipElement.style.position = 'absolute'
+        tooltipElement.style.left = x + 'px'
+        tooltipElement.style.top = y + 'px'
+
         tooltipElement.addEventListener('click', this.closeTooltip)
         this.element = tooltipElement
     }
@@ -69,9 +87,11 @@ class ProjectItem {
         if (this.hasActiveTooltip) {
             return
         }
+        const projectElement = document.getElementById(this.id)
+        const tooltipText = projectElement.dataset.extraInfo
         const tooltip = new Tooltip(() => {
             this.hasActiveTooltip = false
-        })
+        }, tooltipText, this.id)
         tooltip.attach()
         this.hasActiveTooltip = true
     }
@@ -79,7 +99,7 @@ class ProjectItem {
     connectMoreInfoButton() {
         const projectItemEl = document.getElementById(this.id)
         let moreInfoButton = projectItemEl.querySelector('button:first-of-type')
-        moreInfoButton.addEventListener('click', this.showMpreInfoHandler)
+        moreInfoButton.addEventListener('click', this.showMpreInfoHandler.bind(this))
     }
 
     connectSwitchButton(type) {
@@ -115,7 +135,7 @@ class ProjectList {
 
     addProject(project) {
         this.projects.push(project)
-        DOMHelper. moveElement(project.id, `#${this.type}-projects ul`)
+        DOMHelper.moveElement(project.id, `#${this.type}-projects ul`)
         project.update(this.switchProject.bind(this), this.type)
     }
 
@@ -137,7 +157,6 @@ class App {
         finishedProjectsList.setSwitchHandlerFunction(
             activeProjectsList.addProject.bind(activeProjectsList)
         )
-
     }
 }
 
